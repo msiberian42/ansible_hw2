@@ -1,0 +1,9 @@
+data_dir = "/var/lib/vector"
+
+[sources.logs]
+type = "journald"
+
+[sinks.console]
+type = "console"
+inputs = ["logs"]
+encoding.codec = "json"

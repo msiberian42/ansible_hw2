@@ -13,22 +13,23 @@
         - name: Get clickhouse distrib
           ansible.builtin.get_url:
             url: "https://packages.clickhouse.com/rpm/stable/{{ item }}-{{ clickhouse_version }}.noarch.rpm"
-            dest: "./{{ item }}-{{ clickhouse_version }}.rpm"
+            dest: "/tmp/{{ item }}-{{ clickhouse_version }}.rpm"
             mode: "0644"
           with_items: "{{ clickhouse_packages }}"
       rescue:
         - name: Get clickhouse distrib
           ansible.builtin.get_url:
             url: "https://packages.clickhouse.com/rpm/stable/clickhouse-common-static-{{ clickhouse_version }}.x86_64.rpm"
-            dest: "./clickhouse-common-static-{{ clickhouse_version }}.rpm"
+            dest: "/tmp/clickhouse-common-static-{{ clickhouse_version }}.rpm"
             mode: "0644"
     - name: Install clickhouse packages
       become: true
       ansible.builtin.dnf:
         name:
-          - clickhouse-common-static-{{ clickhouse_version }}.rpm
-          - clickhouse-client-{{ clickhouse_version }}.rpm
-          - clickhouse-server-{{ clickhouse_version }}.rpm
+          - "/tmp/clickhouse-common-static-{{ clickhouse_version }}.rpm"
+          - "/tmp/clickhouse-client-{{ clickhouse_version }}.rpm"
+          - "/tmp/clickhouse-server-{{ clickhouse_version }}.rpm"
+        disable_gpg_check: true
       notify: Start clickhouse service
     - name: Flush handlers
       ansible.builtin.meta: flush_handlers
@@ -72,7 +73,7 @@
 
     - name: Install Vector binary
       ansible.builtin.file:
-        src: "{{ vector_install_dir }}/vector-{{ vector_version }}-{{ vector_arch }}-unknown-linux-gnu/bin/vector"
+        src: "{{ vector_install_dir }}/vector-{{ vector_arch }}-unknown-linux-gnu/bin/vector"
         dest: "/usr/local/bin/vector"
         state: link
 
@@ -80,6 +81,14 @@
       ansible.builtin.file:
         path: "{{ vector_config_dir }}"
         state: directory
+        mode: "0755"
+
+    - name: Create Vector data directory
+      ansible.builtin.file:
+        path: "/var/lib/vector"
+        state: directory
+        owner: root
+        group: root
         mode: "0755"
 
     - name: Deploy Vector configuration

@@ -1,0 +1,13 @@
+[Unit]
+Description=Vector
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/vector --config {{ vector_config_dir }}/vector.toml
+Restart=on-failure
+User=root
+
+[Install]
+WantedBy=multi-user.target
