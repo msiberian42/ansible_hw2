@@ -34,3 +34,61 @@
       register: create_db
       failed_when: create_db.rc != 0 and create_db.rc !=82
       changed_when: create_db.rc == 0
+
+- name: Install Vector
+  hosts: vector
+  become: true
+
+  handlers:
+    - name: Restart vector
+      ansible.builtin.systemd:
+        name: vector
+        state: restarted
+        enabled: true
+        daemon_reload: true
+
+  tasks:
+    - name: Download Vector
+      ansible.builtin.get_url:
+        url: "https://packages.timber.io/vector/{{ vector_version }}/vector-{{ vector_version }}-{{ vector_arch }}-unknown-linux-gnu.tar.gz"
+        dest: "/tmp/vector-{{ vector_version }}.tar.gz"
+        mode: "0644"
+
+    - name: Create Vector directory
+      ansible.builtin.file:
+        path: "{{ vector_install_dir }}"
+        state: directory
+        mode: "0755"
+
+    - name: Unarchive Vector
+      ansible.builtin.unarchive:
+        src: "/tmp/vector-{{ vector_version }}.tar.gz"
+        dest: "{{ vector_install_dir }}"
+        remote_src: true
+        creates: "{{ vector_install_dir }}/vector"
+
+    - name: Install Vector binary
+      ansible.builtin.file:
+        src: "{{ vector_install_dir }}/vector-{{ vector_version }}-{{ vector_arch }}-unknown-linux-gnu/bin/vector"
+        dest: "/usr/local/bin/vector"
+        state: link
+
+    - name: Create Vector config directory
+      ansible.builtin.file:
+        path: "{{ vector_config_dir }}"
+        state: directory
+        mode: "0755"
+
+    - name: Deploy Vector configuration
+      ansible.builtin.template:
+        src: "vector.toml.j2"
+        dest: "{{ vector_config_dir }}/vector.toml"
+        mode: "0644"
+      notify: Restart vector
+    
+    - name: Deploy Vector systemd unit
+      ansible.builtin.template:
+        src: "vector.service.j2"
+        dest: "/etc/systemd/system/vector.service"
+        mode: "0644"
+      notify: Restart vector
